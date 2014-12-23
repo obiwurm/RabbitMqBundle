@@ -1,3 +1,8 @@
+- 2014-12-22
+    * Fork RabbitMqBundle into li3_amqp
+    * Remove Symphony bundle files and Composer and general cleanup
+    * Conversion to Lithium paradigm
+
 - 2014-11-27
     * Added interface `OldSound\RabbitMqBundle\Provider\QueuesProviderInterface`
     * Added `queues_provider` configuration for multiple consumer
