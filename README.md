@@ -1,161 +1,125 @@
-# RabbitMqBundle #
+# li3_amqp
 
-## About ##
+## About
 
-The RabbitMqBundle incorporates messaging in your application via [RabbitMQ](http://www.rabbitmq.com/) using the [php-amqplib](http://github.com/videlalvaro/php-amqplib) library.
+This is a port of the Symphony [RabbitMqBundle](https://github.com/videlalvaro/RabbitMqBundle) originally written by Alvaro Videla.
 
-The bundle implements several messaging patterns as seen on the [Thumper](https://github.com/videlalvaro/Thumper) library. Therefore publishing messages to RabbitMQ from a Symfony2 controller is as easy as:
+The `li3_amqp` plugin incorporates messaging in your application via [RabbitMQ](http://www.rabbitmq.com/) using the [php-amqplib](http://github.com/videlalvaro/php-amqplib) library.
 
-```php
+The library implements several messaging patterns as seen on the [Thumper](https://github.com/videlalvaro/Thumper) library. Therefore publishing messages to RabbitMQ from a Lithium controller is as easy as:
+
+@todo:
+{{{php
 $msg = array('user_id' => 1235, 'image_path' => '/path/to/new/pic.png');
 $this->get('old_sound_rabbit_mq.upload_picture_producer')->publish(serialize($msg));
-```
+}}}
 
 Later when you want to consume 50 messages out of the `upload_pictures` queue, you just run on the CLI:
 
-```bash
-$ ./app/console rabbitmq:consumer -m 50 upload_picture
-```
+@todo:
+{{{bash
+$ ./app/libraries/lithium/console/li3 amqp-consume -m 50 upload_picture
+//$ ./app/console rabbitmq:consumer -m 50 upload_picture
+}}}
 
 All the examples expect a running RabbitMQ server.
 
-This bundle was presented at [Symfony Live Paris 2011](http://www.symfony-live.com/paris/schedule#session-av1) conference. See the slides [here](http://www.slideshare.net/old_sound/theres-a-rabbit-on-my-symfony).
+## Installation
+`li3_amqp` requires the `php-amqplib` library to run.
 
-[![Build Status](https://secure.travis-ci.org/videlalvaro/RabbitMqBundle.png?branch=master)](http://travis-ci.org/videlalvaro/RabbitMqBundle)
+The installation process is simple, just place the source code in the libraries directory under a `php-amqplib` and `li3_amqp` directories:
 
-## Installation ##
+{{{
+  $ cd /path/to/app/libraries
+  $ git clone git@github.com:videlalvaro/php-amqplib.git
+  $ git clone git@github.com:obiwurm/li3_amqp.git
+}}}
 
-### For Symfony >= 2.1.* ###
-
-Require the bundle in your composer.json file:
-
-````
-{
-    "require": {
-        "oldsound/rabbitmq-bundle": "1.*",
+As `php-amqplib` is not a Lithium plugin you will have to define a loader to get access to it's classes.
+{{{
+  Libraries::add('php-amqplib', array(
+    "path" => LITHIUM_LIBRARY_PATH . "/php-amqplib/PhpAmqpLib",
+    "includePath" => LITHIUM_LIBRARY_PATH . "/php-amqplib",
+    "loader" => function($class) {
+      include str_replace("\\", "/", $class) . ".php";
     }
-}
-```
+  ));
+}}}
 
-Register the bundle:
+`li3_amqp` is a plugin, you can install it in your application as
 
-```php
-// app/AppKernel.php
+{{{
+  Libraries::add('li3_amqp');
+}}}
 
-public function registerBundles()
-{
-    $bundles = array(
-        new OldSound\RabbitMqBundle\OldSoundRabbitMqBundle(),
-    );
-}
-```
+## Connection
 
-Install the bundle:
+Define the connection to the RabbitMQ service in your application's
+connections bootstrap file. The minimum you need to define is the
+type of adapter to use, which is `Amqp`. Do this for each environment your application
+will run in.
 
-```
-$ composer update oldsound/rabbitmq-bundle
-```
+{{{
+  Connections::add('li3_amqp', array(
+    'development' => array(
+      'type' => 'Amqp'
+    )
+  ));
+}}}
 
-Enjoy !
+The connection will use RabbitMq's default connection
+configuration unless you specify them here.
 
-### For Symfony 2.0.* ###
+{{{
+  Connections::add('li3_amqp', array(
+    'development' => array(
+      'type' => 'Amqp',
+      'host' => 'localhost',
+      'port' => '5672',
+      'user' => 'guest',
+      'password' => 'guest'
+    )
+  ));
+}}}
 
-The following instructions have been tested on a project created with the [Symfony2 Standard 2.0.6](http://symfony.com/download?v=Symfony_Standard_2.0.6.tgz)
+For further configuration properties see the data source [Amqp.php](li3_amqp/extensions/data/source/Amqp::__construct(\))
 
-Put the RabbitMqBundle and the [php-amqplib](http://github.com/videlalvaro/php-amqplib) library into the deps file:
 
-```ini
-[RabbitMqBundle]
-git=http://github.com/videlalvaro/RabbitMqBundle.git
-target=/bundles/OldSound/RabbitMqBundle
+## Configuration
 
-[php-amqplib]
-git=http://github.com/videlalvaro/php-amqplib.git
-target=videlalvaro/php-amqplib
-```
+Define the message endpoints that your application will have:
 
-Register the bundle and library namespaces in the `app/autoload.php` file:
+{{{
+Libraries::add('li3_amqp', array(
+  "producers" => array(
+    "upload_picture" => array(
+      "connection" => "li3_amqp",
+      "exchange_options" => array("name" => "upload-picture", "type" => "direct")
+  ),
+  "consumers" => array(
+    "upload_picture" => array(
+      "connection" => "li3_amqp",
+      "exchange_options" => array("name" => "upload-picture", "type" => "direct"),
+      "queue_options" => array("name" => "upload-picture"),
+      "adapter" => "UploadPicture"
+  )
+}}}
 
-```php
-$loader->registerNamespaces(array(
-    'OldSound'         => __DIR__.'/../vendor/bundles',
-    'PhpAmqpLib'       => __DIR__.'/../vendor/videlalvaro/php-amqplib',
-));
-```
+In this example we've configured an upload_picture producer and an upload_picture consumer. The later expects that there's an adapter called `UploadPicture`.
 
-Add the RabbitMqBundle to your application's kernel:
-
-```php
-public function registerBundles()
-{
-    $bundles = array(
-        new OldSound\RabbitMqBundle\OldSoundRabbitMqBundle(),
-    );
-}
-```
-
-### Warning - BC Breaking Changes ###
-
-* Since 2012-06-04 Some default options for exchanges declared in the "producers" config section
-  have changed to match the defaults of exchanges declared in the "consumers" section.
-  The affected settings are:
-
-  * `durable` was changed from `false` to `true`,
-  * `auto_delete` was changed from `true` to `false`.
-
-  Your configuration must be updated if you were relying on the previous default values.
-* Since 2012-04-24 The ConsumerInterface::execute method signature has changed
-* Since 2012-01-03 the consumers execute method gets the whole AMQP message object and not just the body. See the CHANGELOG file for more details.
-
-## Usage ##
-
-Add the `old_sound_rabbit_mq` section in your configuration file:
-
-```yaml
-old_sound_rabbit_mq:
-    connections:
-        default:
-            host:     'localhost'
-            port:     5672
-            user:     'guest'
-            password: 'guest'
-            vhost:    '/'
-            lazy:     false
-            connection_timeout: 3
-            read_write_timeout: 3
-
-            # requires php-amqplib v2.4.1+ and PHP5.4+
-            keepalive: false
-
-            # requires php-amqplib v2.4.1+
-            heartbeat: 0
-    producers:
-        upload_picture:
-            connection:       default
-            exchange_options: {name: 'upload-picture', type: direct}
-    consumers:
-        upload_picture:
-            connection:       default
-            exchange_options: {name: 'upload-picture', type: direct}
-            queue_options:    {name: 'upload-picture'}
-            callback:         upload_picture_service
-```
-
-Here we configure the connection service and the message endpoints that our application will have. In this example your service container will contain the service `old_sound_rabbit_mq.upload_picture_producer` and `old_sound_rabbit_mq.upload_picture_consumer`. The later expects that there's a service called `upload_picture_service`.
-
-If you don't specify a connection for the client, the client will look for a connection with the same alias. So for our `upload_picture` the service container will look for an `upload_picture` connection.
+If you don't specify a connection for the client, the client will look for a connection with the same alias. So for our `upload_picture` the client will look for an `upload_picture` connection.
 
 If you need to add optional queue arguments, then your queue options can be something like this:
 
-```yaml
-queue_options: {name: 'upload-picture', arguments: {'x-ha-policy': ['S', 'all']}}
-```
+{{{
+"queue_options" => array("name" => "upload-picture", "arguments" => array("x-ha-policy" => ['S', 'all']))
+}}}
 
 another example with message TTL of 20 seconds:
 
-```yaml
-queue_options: {name: 'upload-picture', arguments: {'x-message-ttl': ['I', 20000]}}
-```
+{{{
+"queue_options" => array("name" => "upload-picture", "arguments" => array("x-message-ttl" => ['I', 20000]))
+}}}
 
 The argument value must be a list of datatype and value. Valid datatypes are:
 
@@ -170,15 +134,18 @@ Adapt the `arguments` according to your needs.
 
 If you want to bind queue with specific routing keys you can declare it in producer or consumer config:
 
-```yaml
-queue_options:
-    name: "upload-picture"
-    routing_keys:
-      - 'android.#.upload'
-      - 'iphone.upload'
-```
+{{{
+"queue_options" => array(
+  "name" => "upload-picture",
+  "routing_keys" => array(
+    "android.#.upload",
+    "iphone.upload"
+  )
+)
+}}}
 
-### Important notice - Lazy Connections ###
+# @todo: Everything below here
+### Important notice - Lazy Connections
 
 In a Symfony environment all services are fully bootstrapped for each request, from version >= 2.3 you can declare
 a service as lazy ([Lazy Services](http://symfony.com/doc/master/components/dependency_injection/lazy_services.html)).
@@ -187,23 +154,24 @@ configuration to avoid unnecessary connections to your message broker in every r
 It's extremely recommended to use lazy connections because performance reasons, nevertheless lazy option is disabled
 by default to avoid possible breaks in applications already using this bundle.
 
-## Producers, Consumers, What? ##
+## Producers, Consumers, What?
 
 In a messaging application, the process sending messages to the broker is called __producer__ while the process receiving those messages is called __consumer__. In your application you will have several of them that you can list under their respective entries in the configuration.
 
-### Producer ###
+### Producer
 
 A producer will be used to send messages to the server. In the AMQP Model, messages are sent to an __exchange__, this means that in the configuration for a producer you will have to specify the connection options along with the exchange options, which usually will be the name of the exchange and the type of it.
 
 Now let's say that you want to process picture uploads in the background. After you move the picture to its final location, you will publish a message to server with the following information:
 
-```php
+@todo:
+{{{
 public function indexAction($name)
 {
     $msg = array('user_id' => 1235, 'image_path' => '/path/to/new/pic.png');
     $this->get('old_sound_rabbit_mq.upload_picture_producer')->publish(serialize($msg));
 }
-```
+}}}
 
 As you can see, if in your configuration you have a producer called __upload\_picture__, then in the service container you will have a service called __old_sound_rabbit_mq.upload\_picture\_producer__.
 
