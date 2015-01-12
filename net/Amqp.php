@@ -8,6 +8,7 @@ namespace li3_amqp\net;
 use lithium\core\Libraries;
 use lithium\data\Connections;
 use lithium\core\ClassNotFoundException;
+use lithium\action\DispatchException;
 
 class Amqp extends \lithium\core\StaticObject {
 
@@ -30,21 +31,21 @@ class Amqp extends \lithium\core\StaticObject {
   const NON_PERSISTENT = 1;
   const PERSISTENT = 2;
 
+  private static function _getConnection() {
+    return Connections::get('li3_amqp');
+  }
+
   private static function _getProducer($name) {
     $config = Libraries::get('li3_amqp');
 
-    var_dump('_getProducer()', $config);
-    
     if ($producer = isset($config['producers'][$name]) ? $config['producers'][$name] : false) {
       $producer['class'] = empty($producer['class']) ? static::$_classes['producer'] : $producer['class'];
 
-      var_dump('producer config', $producer);
-
-      if (empty($producer['connection']) || $producer['connection'] == 'default') {
-        $producer['connection'] = 'li3_amqp';
+      if (empty($producer['connection']) || $producer['connection'] === 'default') {
+        $producer['connection'] = static::_getConnection();
+      } else if (is_string($producer['connection'])) {
+        $producer['connection'] = Connections::get($producer['connection']);
       }
-      $producer['connection'] = Connections::get($producer['connection']);
-
 			try {
         return Libraries::instance('producer', $producer['class'], $producer);
 			} catch (ClassNotFoundException $e) {
@@ -58,9 +59,9 @@ class Amqp extends \lithium\core\StaticObject {
     $producers = static::$_producers;
     if (isset($name) && !isset($producers[$name])) {
       $producers[$name] = static::_getProducer($name);
-      die(var_dump('producer()', $producers));
+      static::$_producers = $producers;
     }
-    return $name !== null ? $producers['name'] : $producers;
+    return $name !== null ? $producers[$name] : $producers;
   }
 
 }

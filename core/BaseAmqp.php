@@ -7,16 +7,16 @@ use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
 
 abstract class BaseAmqp extends \lithium\core\Object {
-  protected $connection;
-  protected $channel;
-  protected $consumerTag;
-  protected $exchangeDeclared = false;
-  protected $queueDeclared = false;
-  protected $routingKey = '';
-  protected $autoSetupFabric = true;
-  protected $basicProperties = array('content_type' => 'text/plain', 'delivery_mode' => 2);
+  protected $_connection;
+  protected $_channel;
+  protected $_consumerTag;
+  protected $_exchangeDeclared = false;
+  protected $_queueDeclared = false;
+  protected $_routingKey = '';
+  protected $_autoSetupFabric = true;
+  protected $_basicProperties = array('content_type' => 'text/plain', 'delivery_mode' => 2);
 
-  protected $exchangeOptions = array(
+  protected $_exchangeOptions = array(
     'passive' => false,
     'durable' => true,
     'auto_delete' => false,
@@ -27,7 +27,7 @@ abstract class BaseAmqp extends \lithium\core\Object {
     'declare' => true,
   );
 
-  protected $queueOptions = array(
+  protected $_queueOptions = array(
     'name' => '',
     'passive' => false,
     'durable' => true,
@@ -38,60 +38,48 @@ abstract class BaseAmqp extends \lithium\core\Object {
     'ticket' => null
   );
 
-  /**
-   * Refactor: Utilising Object Config
-   *
-   * @param AMQPConnection   $conn
-   * @param AMQPChannel|null $ch
-   * @param null             $consumerTag
-   *
-   public function __construct(AMQPConnection $conn, AMQPChannel $ch = null, $consumerTag = null) {
-     $this->conn = $conn;
-     $this->ch = $ch;
-
-     if (!($conn instanceof AMQPLazyConnection)) {
-       $this->getChannel();
-}
-
-$this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostname(), getmypid()) : $consumerTag;
-}
-   */
+  protected $_autoConfig = array(
+    'connection',
+    'consumerTag',
+    'exchangeOptions' => 'merge',
+    'queueOptions' => 'merge'
+  );
 
   public function _init() {
     parent::_init();
-    if (!($this->connection instanceof AMQPLazyConnection)) {
+    if (!($this->_connection instanceof AMQPLazyConnection)) {
       $this->getChannel();
     }
-    $this->consumerTag = empty($this->consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostname(), getmypid()) : $this->consumerTag;
+    $this->_consumerTag = empty($this->_consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostname(), getmypid()) : $this->_consumerTag;
   }
 
   public function __destruct() {
-    if ($this->channel) {
-      $this->channel->close();
+    if ($this->_channel) {
+      $this->_channel->close();
     }
 
-    if ($this->connection && $this->connection->isConnected()) {
-      $this->connection->close();
+    if ($this->_connection && $this->_connection->isConnected()) {
+      $this->_connection->close();
     }
   }
 
   public function reconnect() {
-    if (!$this->connection->isConnected()) {
+    if (!$this->_connection->isConnected()) {
       return;
     }
 
-    $this->connection->reconnect();
+    $this->_connection->reconnect();
   }
 
   /**
    * @return AMQPChannel
    */
   public function getChannel() {
-    if (empty($this->channel)) {
-      $this->channel = $this->connection->channel();
+    if (empty($this->_channel)) {
+      $this->_channel = $this->_connection->channel();
     }
 
-    return $this->channel;
+    return $this->_channel;
   }
 
   /**
@@ -99,7 +87,7 @@ $this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostna
    * @return void
    */
   public function setChannel(AMQPChannel $channel) {
-    $this->channel = $channel;
+    $this->_channel = $channel;
   }
 
   /**
@@ -116,7 +104,7 @@ $this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostna
       throw new \InvalidArgumentException('You must provide an exchange type');
     }
 
-    $this->exchangeOptions = array_merge($this->exchangeOptions, $options);
+    $this->_exchangeOptions = array_merge($this->_exchangeOptions, $options);
   }
 
   /**
@@ -124,7 +112,7 @@ $this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostna
    * @return void
    */
   public function setQueueOptions(array $options = array()) {
-    $this->queueOptions = array_merge($this->queueOptions, $options);
+    $this->_queueOptions = array_merge($this->_queueOptions, $options);
   }
 
   /**
@@ -132,52 +120,52 @@ $this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostna
    * @return void
    */
   public function setRoutingKey($routingKey) {
-    $this->routingKey = $routingKey;
+    $this->_routingKey = $routingKey;
   }
 
-  protected function exchangeDeclare() {
-    if ($this->exchangeOptions['declare']) {
+  protected function _exchangeDeclare() {
+    if ($this->_exchangeOptions['declare']) {
       $this->getChannel()->exchange_declare(
-        $this->exchangeOptions['name'],
-        $this->exchangeOptions['type'],
-        $this->exchangeOptions['passive'],
-        $this->exchangeOptions['durable'],
-        $this->exchangeOptions['auto_delete'],
-        $this->exchangeOptions['internal'],
-        $this->exchangeOptions['nowait'],
-        $this->exchangeOptions['arguments'],
-        $this->exchangeOptions['ticket']);
+        $this->_exchangeOptions['name'],
+        $this->_exchangeOptions['type'],
+        $this->_exchangeOptions['passive'],
+        $this->_exchangeOptions['durable'],
+        $this->_exchangeOptions['auto_delete'],
+        $this->_exchangeOptions['internal'],
+        $this->_exchangeOptions['nowait'],
+        $this->_exchangeOptions['arguments'],
+        $this->_exchangeOptions['ticket']);
 
-      $this->exchangeDeclared = true;
+      $this->_exchangeDeclared = true;
     }
   }
 
-  protected function queueDeclare() {
-    if (null !== $this->queueOptions['name']) {
-      list($queueName, ,) = $this->getChannel()->queue_declare($this->queueOptions['name'], $this->queueOptions['passive'],
-        $this->queueOptions['durable'], $this->queueOptions['exclusive'],
-        $this->queueOptions['auto_delete'], $this->queueOptions['nowait'],
-        $this->queueOptions['arguments'], $this->queueOptions['ticket']);
+  protected function _queueDeclare() {
+    if (null !== $this->_queueOptions['name']) {
+      list($queueName, ,) = $this->getChannel()->queue_declare($this->_queueOptions['name'], $this->_queueOptions['passive'],
+        $this->_queueOptions['durable'], $this->_queueOptions['exclusive'],
+        $this->_queueOptions['auto_delete'], $this->_queueOptions['nowait'],
+        $this->_queueOptions['arguments'], $this->_queueOptions['ticket']);
 
-      if (isset($this->queueOptions['routing_keys']) && count($this->queueOptions['routing_keys']) > 0) {
-        foreach ($this->queueOptions['routing_keys'] as $routingKey) {
-          $this->getChannel()->queue_bind($queueName, $this->exchangeOptions['name'], $routingKey);
+      if (isset($this->_queueOptions['routing_keys']) && count($this->_queueOptions['routing_keys']) > 0) {
+        foreach ($this->_queueOptions['routing_keys'] as $routingKey) {
+          $this->getChannel()->queue_bind($queueName, $this->_exchangeOptions['name'], $routingKey);
         }
       } else {
-        $this->getChannel()->queue_bind($queueName, $this->exchangeOptions['name'], $this->routingKey);
+        $this->getChannel()->queue_bind($queueName, $this->_exchangeOptions['name'], $this->_routingKey);
       }
 
-      $this->queueDeclared = true;
+      $this->_queueDeclared = true;
     }
   }
 
   public function setupFabric() {
-    if (!$this->exchangeDeclared) {
-      $this->exchangeDeclare();
+    if (!$this->_exchangeDeclared) {
+      $this->_exchangeDeclare();
     }
 
-    if (!$this->queueDeclared) {
-      $this->queueDeclare();
+    if (!$this->_queueDeclared) {
+      $this->_queueDeclare();
     }
   }
 
@@ -185,6 +173,6 @@ $this->consumerTag = empty($consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostna
    * disables the automatic SetupFabric when using a consumer or producer
    */
   public function disableAutoSetupFabric() {
-    $this->autoSetupFabric = false;
+    $this->_autoSetupFabric = false;
   }
 }

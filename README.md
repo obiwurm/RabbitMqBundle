@@ -25,28 +25,14 @@ $ ./app/libraries/lithium/console/li3 amqp-consume -m 50 upload_picture
 All the examples expect a running RabbitMQ server.
 
 ## Installation
-`li3_amqp` requires the `php-amqplib` library to run.
-
-The installation process is simple, just place the source code in the libraries directory under a `php-amqplib` and `li3_amqp` directories:
+The installation process is simple, just place the source code in the libraries directory under a `li3_amqp` directory:
 
 {{{
   $ cd /path/to/app/libraries
-  $ git clone git@github.com:videlalvaro/php-amqplib.git
   $ git clone git@github.com:obiwurm/li3_amqp.git
 }}}
 
-As `php-amqplib` is not a Lithium plugin you will have to define a loader to get access to it's classes.
-{{{
-  Libraries::add('php-amqplib', array(
-    "path" => LITHIUM_LIBRARY_PATH . "/php-amqplib/PhpAmqpLib",
-    "includePath" => LITHIUM_LIBRARY_PATH . "/php-amqplib",
-    "loader" => function($class) {
-      include str_replace("\\", "/", $class) . ".php";
-    }
-  ));
-}}}
-
-`li3_amqp` is a plugin, you can install it in your application as
+`li3_amqp` is a lithium plugin, you can install it in your application as
 
 {{{
   Libraries::add('li3_amqp');
@@ -94,13 +80,13 @@ Libraries::add('li3_amqp', array(
   "producers" => array(
     "upload_picture" => array(
       "connection" => "li3_amqp",
-      "exchange_options" => array("name" => "upload-picture", "type" => "direct")
+      "exchangeOptions" => array("name" => "upload-picture", "type" => "direct")
   ),
   "consumers" => array(
     "upload_picture" => array(
       "connection" => "li3_amqp",
-      "exchange_options" => array("name" => "upload-picture", "type" => "direct"),
-      "queue_options" => array("name" => "upload-picture"),
+      "exchangeOptions" => array("name" => "upload-picture", "type" => "direct"),
+      "queueOptions" => array("name" => "upload-picture"),
       "adapter" => "UploadPicture"
   )
 }}}
@@ -112,13 +98,13 @@ If you don't specify a connection for the client, the client will look for a con
 If you need to add optional queue arguments, then your queue options can be something like this:
 
 {{{
-"queue_options" => array("name" => "upload-picture", "arguments" => array("x-ha-policy" => ['S', 'all']))
+"queueOptions" => array("name" => "upload-picture", "arguments" => array("x-ha-policy" => ['S', 'all']))
 }}}
 
 another example with message TTL of 20 seconds:
 
 {{{
-"queue_options" => array("name" => "upload-picture", "arguments" => array("x-message-ttl" => ['I', 20000]))
+"queueOptions" => array("name" => "upload-picture", "arguments" => array("x-message-ttl" => ['I', 20000]))
 }}}
 
 The argument value must be a list of datatype and value. Valid datatypes are:
@@ -135,9 +121,9 @@ Adapt the `arguments` according to your needs.
 If you want to bind queue with specific routing keys you can declare it in producer or consumer config:
 
 {{{
-"queue_options" => array(
+"queueOptions" => array(
   "name" => "upload-picture",
-  "routing_keys" => array(
+  "routingKeys" => array(
     "android.#.upload",
     "iphone.upload"
   )

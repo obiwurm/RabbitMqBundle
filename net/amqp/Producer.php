@@ -1,6 +1,6 @@
 <?php
 
-namespace li3_amqp\net\amqp\Producer;
+namespace li3_amqp\net\amqp;
 
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -8,23 +8,23 @@ use PhpAmqpLib\Message\AMQPMessage;
  * Prodcuer, that publishes AMQP Messages
  */
 class Producer extends \li3_amqp\core\BaseAmqp {
-  protected $contentType = 'text/plain';
-  protected $deliveryMode = 2;
+  protected $_contentType = 'text/plain';
+  protected $_deliveryMode = 2;
 
   public function setContentType($contentType) {
-    $this->contentType = $contentType;
+    $this->_contentType = $contentType;
 
     return $this;
   }
 
   public function setDeliveryMode($deliveryMode) {
-    $this->deliveryMode = $deliveryMode;
+    $this->_deliveryMode = $deliveryMode;
 
     return $this;
   }
 
-  protected function getBasicProperties() {
-    return array('content_type' => $this->contentType, 'delivery_mode' => $this->deliveryMode);
+  protected function _getBasicProperties() {
+    return array('content_type' => $this->_contentType, 'delivery_mode' => $this->_deliveryMode);
   }
 
   /**
@@ -35,11 +35,11 @@ class Producer extends \li3_amqp\core\BaseAmqp {
    * @param array $additionalProperties
    */
   public function publish($msgBody, $routingKey = '', $additionalProperties = array()) {
-    if ($this->autoSetupFabric) {
+    if ($this->_autoSetupFabric) {
       $this->setupFabric();
     }
 
-    $msg = new AMQPMessage((string) $msgBody, array_merge($this->getBasicProperties(), $additionalProperties));
-    $this->getChannel()->basic_publish($msg, $this->exchangeOptions['name'], (string) $routingKey);
+    $msg = new AMQPMessage((string) $msgBody, array_merge($this->_getBasicProperties(), $additionalProperties));
+    $this->getChannel()->basic_publish($msg, $this->_exchangeOptions['name'], (string) $routingKey);
   }
 }
