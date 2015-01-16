@@ -25,13 +25,21 @@ class Amqp extends \lithium\core\StaticObject {
 	 */
   private static $_producers = array();
 
+  /**
+   * A map of consumer objects mapped to names.
+   *
+   * @var array
+   */
+  private static $_consumers = array();
+
 	/**
 	 * Placeholder for class dependencies i.e. Producers and Consumers
 	 *
 	 * @var array
 	 */
 	protected static $_classes = array(
-		'producers' => 'Producer'
+		'producers' => 'Producer',
+    'consumers' => 'Consumer'
 	);
 
   const NON_PERSISTENT = 1;
@@ -61,21 +69,37 @@ class Amqp extends \lithium\core\StaticObject {
     return static::_get('producers', $name, $options);
   }
 
-  private static function _get($path, $name, $options) {
+  private static function _getConsumer($name) {
+    $options = array();
+    return static::_get('consumers', $name, $options);
+  }
+
+  private static function _get($path, $name, $options = array()) {
     $config = Libraries::get('li3_amqp');
+    $default = array(
+      'exchangeOptions' => array(),
+      'queueOptions' => array()
+    );
 
     if ($object = isset($config[$path][$name]) ? $config[$path][$name] : false) {
+      $object = $object + $default;
+      $options = $options + $default;
+
       $object['class'] = empty($object['class']) ? static::$_classes[$path] : $object['class'];
 
-      if (!isset($object['exchangeOptions'])) {
-        $object['exchangeOptions'] = array();
-      }
-      if (!isset($object['queueOptions'])) {
-        $object['queueOptions'] = array();
-      }
+      $classType = ucfirst(Inflector::singularize($path));
 
       $object['exchangeOptions'] = array_merge($options['exchangeOptions'], $object['exchangeOptions']);
       $object['queueOptions'] = array_merge($options['queueOptions'], $object['queueOptions']);
+      
+      if (isset($object['callback'])) {
+        $callback = $object['callback'];
+        try {
+          $object['callback'] = array(Libraries::instance($path, $callback, array()), 'execute');
+        } catch (ClassNotFoundException $e) {
+          throw new ClassNotFoundException(sprintf("Amqp %s callback of class `%s` not found during Libraries::instance(): %s", $classType, $callback, $e->getMessage()), null, $e);
+        }
+      }
 
       if (empty($object['connection'])) {
         $object['connection'] = Connections::get($name);
@@ -86,8 +110,6 @@ class Amqp extends \lithium\core\StaticObject {
       if (!$object['connection'] instanceof AbstractConnection) {
         $object['connection'] = static::_getConnection();
       }
-
-      $classType = ucfirst(Inflector::singularize($path));
 
 			try {
         return Libraries::instance($path, $object['class'], $object);
@@ -105,6 +127,15 @@ class Amqp extends \lithium\core\StaticObject {
       static::$_producers = $producers;
     }
     return $name !== null ? $producers[$name] : $producers;
+  }
+
+  public static function consumer($name = null) {
+    $consumers = static::$_consumers;
+    if (isset($name) && !isset($consumers[$name])) {
+      $consumers[$name] = static::_getConsumer($name);
+      static::$_consumers = $consumers;
+    }
+    return $name !== null ? $consumers[$name] : $consumers;
   }
 
 }

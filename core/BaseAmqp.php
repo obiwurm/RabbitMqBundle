@@ -119,7 +119,6 @@ abstract class BaseAmqp extends \lithium\core\Object {
   }
 
   /**
-   * @todo: possibly set via autoconfig?
    * @param  string $routingKey
    * @return void
    */
