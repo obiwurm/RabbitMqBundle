@@ -5,6 +5,7 @@ namespace li3_amqp\core;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
+use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 
 abstract class BaseAmqp extends \lithium\core\Object {
   protected $_connection;
@@ -51,6 +52,29 @@ abstract class BaseAmqp extends \lithium\core\Object {
       $this->getChannel();
     }
     $this->_consumerTag = empty($this->_consumerTag) ? sprintf("PHPPROCESS_%s_%s", gethostname(), getmypid()) : $this->_consumerTag;
+
+    //validate exchange options
+    $options = $this->_exchangeOptions;
+    if (!isset($options['name'])) {
+      throw new \InvalidArgumentException('You must provide an exchange name');
+    }
+
+    if (empty($options['type'])) {
+      throw new \InvalidArgumentException('You must provide an exchange type');
+    }
+
+    // if this is the case, validate that the exchange exists
+    if ($options['passive'] && !$options['declare']) {
+      try {
+        $this->getChannel()->exchange_declare(
+          $options['name'],
+          $options['type'],
+          $options['passive']
+        );
+      } catch (AMQPProtocolChannelException $e) {
+        throw new AMQPProtocolChannelException($e->getCode(), $e->getMessage(), $e->getPrevious());
+      }
+    }
   }
 
   public function __destruct() {
@@ -91,31 +115,7 @@ abstract class BaseAmqp extends \lithium\core\Object {
   }
 
   /**
-   * @throws \InvalidArgumentException
-   * @param  array                     $options
-   * @return void
-   */
-  public function setExchangeOptions(array $options = array()) {
-    if (!isset($options['name'])) {
-      throw new \InvalidArgumentException('You must provide an exchange name');
-    }
-
-    if (empty($options['type'])) {
-      throw new \InvalidArgumentException('You must provide an exchange type');
-    }
-
-    $this->_exchangeOptions = array_merge($this->_exchangeOptions, $options);
-  }
-
-  /**
-   * @param  array $options
-   * @return void
-   */
-  public function setQueueOptions(array $options = array()) {
-    $this->_queueOptions = array_merge($this->_queueOptions, $options);
-  }
-
-  /**
+   * @todo: possibly set via autoconfig?
    * @param  string $routingKey
    * @return void
    */

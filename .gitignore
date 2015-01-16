@@ -1,0 +1,14 @@
+.swn
+*.swp
+*.swo
+*.log
+.screenrc*
+.DS_Store
+._*
+*.PHPEditProject
+.idea
+.buildpath
+.project
+.settings/
+env.diff
+*.lock

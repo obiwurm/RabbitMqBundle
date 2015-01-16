@@ -17,9 +17,10 @@ Libraries::add('php-amqplib', array(
  * Add a new class path for amqp producers
  */
 Libraries::paths(array(
-  "producer" => array(
+  "producers" => array(
+    '{:library}\extensions\net\amqp\producer\{:name}',
+    '{:library}\net\amqp\producer\{:name}',
     '{:library}\net\amqp\{:name}'
-  //  '{:library}\extensions\net\amqp\producer\{:name}'
   )
 ));
 
@@ -27,5 +28,5 @@ Libraries::paths(array(
  * Add a new class path for amqp consumer handlers
  */
 Libraries::paths(array(
-  "consumer" => array('{:library}\extensions\net\amqp\consumer\{:name}')
+  "consumers" => array('{:library}\extensions\net\amqp\consumer\{:name}')
 ));

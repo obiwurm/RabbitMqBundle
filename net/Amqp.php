@@ -1,6 +1,11 @@
 <?php
 /**
  * Class to access Producers and Consumers
+ *
+ * Mimics some configuration setup found in the Symfony extension but leaves 
+ * most data to li3's autoconfig.
+ *
+ * @see RabbitMqBundle\DependencyInjection\OldSoundRabbitMqExtension
  */
 
 namespace li3_amqp\net;
@@ -9,6 +14,8 @@ use lithium\core\Libraries;
 use lithium\data\Connections;
 use lithium\core\ClassNotFoundException;
 use lithium\action\DispatchException;
+use lithium\util\Inflector;
+use PhpAmqpLib\connections\AbstractConnection;
 
 class Amqp extends \lithium\core\StaticObject {
 
@@ -25,7 +32,7 @@ class Amqp extends \lithium\core\StaticObject {
 	 * @var array
 	 */
 	protected static $_classes = array(
-		'producer' => 'Producer'
+		'producers' => 'Producer'
 	);
 
   const NON_PERSISTENT = 1;
@@ -35,21 +42,58 @@ class Amqp extends \lithium\core\StaticObject {
     return Connections::get('li3_amqp');
   }
 
+  /*
+   * This alters default baseamqp options from:
+   * passive: false -> true
+   * declare: true -> false
+   */
   private static function _getProducer($name) {
+    $options = array(
+      'exchangeOptions' => array(
+        'name' => '',
+        'type' => 'direct',
+        'passive' => true,
+        'declare' => false
+      ),
+      'queueOptions' => array(
+        'name' => null
+      )
+    );
+    return static::_get('producers', $name, $options);
+  }
+
+  private static function _get($path, $name, $options) {
     $config = Libraries::get('li3_amqp');
 
-    if ($producer = isset($config['producers'][$name]) ? $config['producers'][$name] : false) {
-      $producer['class'] = empty($producer['class']) ? static::$_classes['producer'] : $producer['class'];
+    if ($object = isset($config[$path][$name]) ? $config[$path][$name] : false) {
+      $object['class'] = empty($object['class']) ? static::$_classes[$path] : $object['class'];
 
-      if (empty($producer['connection']) || $producer['connection'] === 'default') {
-        $producer['connection'] = static::_getConnection();
-      } else if (is_string($producer['connection'])) {
-        $producer['connection'] = Connections::get($producer['connection']);
+      if (!isset($object['exchangeOptions'])) {
+        $object['exchangeOptions'] = array();
       }
+      if (!isset($object['queueOptions'])) {
+        $object['queueOptions'] = array();
+      }
+
+      $object['exchangeOptions'] = array_merge($options['exchangeOptions'], $object['exchangeOptions']);
+      $object['queueOptions'] = array_merge($options['queueOptions'], $object['queueOptions']);
+
+      if (empty($object['connection'])) {
+        $object['connection'] = Connections::get($name);
+      } else if (is_string($object['connection']) && $object['connection'] !== 'default') {
+        $object['connection'] = Connections::get($object['connection']);
+      }
+
+      if (!$object['connection'] instanceof AbstractConnection) {
+        $object['connection'] = static::_getConnection();
+      }
+
+      $classType = ucfirst(Inflector::singularize($path));
+
 			try {
-        return Libraries::instance('producer', $producer['class'], $producer);
+        return Libraries::instance($path, $object['class'], $object);
 			} catch (ClassNotFoundException $e) {
-				throw new DispatchException("Producer of class `{$producer['class']}` not found.", null, $e);
+				throw new DispatchException(sprintf("%s of class `%s` not found.", $classType, $object['class']), null, $e);
 			}
     }
     return null;
