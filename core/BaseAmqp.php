@@ -75,6 +75,10 @@ abstract class BaseAmqp extends \lithium\core\Object {
         throw new AMQPProtocolChannelException($e->getCode(), $e->getMessage(), $e->getPrevious());
       }
     }
+
+    if ($this->_autoSetupFabric) {
+      $this->setupFabric();
+    }
   }
 
   public function __destruct() {
@@ -167,12 +171,5 @@ abstract class BaseAmqp extends \lithium\core\Object {
     if (!$this->_queueDeclared) {
       $this->_queueDeclare();
     }
-  }
-
-  /**
-   * disables the automatic SetupFabric when using a consumer or producer
-   */
-  public function disableAutoSetupFabric() {
-    $this->_autoSetupFabric = false;
   }
 }

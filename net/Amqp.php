@@ -13,7 +13,6 @@ namespace li3_amqp\net;
 use lithium\core\Libraries;
 use lithium\data\Connections;
 use lithium\core\ClassNotFoundException;
-use lithium\action\DispatchException;
 use lithium\util\Inflector;
 use PhpAmqpLib\connections\AbstractConnection;
 
@@ -93,7 +92,7 @@ class Amqp extends \lithium\core\StaticObject {
 			try {
         return Libraries::instance($path, $object['class'], $object);
 			} catch (ClassNotFoundException $e) {
-				throw new DispatchException(sprintf("%s of class `%s` not found.", $classType, $object['class']), null, $e);
+				throw new ClassNotFoundException(sprintf("Amqp %s of class `%s` not found during Libraries::instance(): %s", $classType, $object['class'], $e->getMessage()), null, $e);
 			}
     }
     return null;

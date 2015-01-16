@@ -5,7 +5,7 @@ namespace li3_amqp\net\amqp;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
- * Prodcuer, that publishes AMQP Messages
+ * Producer, that publishes AMQP Messages
  */
 class Producer extends \li3_amqp\core\BaseAmqp {
   protected $_contentType = 'text/plain';
@@ -35,10 +35,6 @@ class Producer extends \li3_amqp\core\BaseAmqp {
    * @param array $additionalProperties
    */
   public function publish($msgBody, $routingKey = '', $additionalProperties = array()) {
-    if ($this->_autoSetupFabric) {
-      $this->setupFabric();
-    }
-
     $msg = new AMQPMessage((string) $msgBody, array_merge($this->_getBasicProperties(), $additionalProperties));
     $this->getChannel()->basic_publish($msg, $this->_exchangeOptions['name'], (string) $routingKey);
   }
