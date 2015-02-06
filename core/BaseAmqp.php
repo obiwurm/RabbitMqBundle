@@ -46,6 +46,8 @@ abstract class BaseAmqp extends \lithium\core\Object {
     'queueOptions' => 'merge'
   );
 
+  protected static $_model = null;
+
   public function _init() {
     parent::_init();
     if (!($this->_connection instanceof AMQPLazyConnection)) {
@@ -170,5 +172,9 @@ abstract class BaseAmqp extends \lithium\core\Object {
     if (!$this->_queueDeclared) {
       $this->_queueDeclare();
     }
+  }
+
+  public static function model() {
+    return static::$_model;
   }
 }

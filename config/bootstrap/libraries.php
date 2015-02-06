@@ -18,8 +18,8 @@ Libraries::add('php-amqplib', array(
  */
 Libraries::paths(array(
   'producers' => array(
-    '{:library}\extensions\net\amqp\producer\{:name}',
-    '{:library}\net\amqp\producer\{:name}',
+    '{:library}\extensions\net\amqp\producers\{:name}',
+    '{:library}\net\amqp\producers\{:name}',
     '{:library}\net\amqp\{:name}'
   )
 ));
@@ -29,7 +29,7 @@ Libraries::paths(array(
  */
 Libraries::paths(array(
   'consumers' => array(
-    '{:library}\extensions\net\amqp\consumer\{:name}',
+    '{:library}\extensions\net\amqp\consumers\{:name}',
     '{:library}\net\amqp\{:name}'
   )
 ));

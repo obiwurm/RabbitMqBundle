@@ -14,6 +14,7 @@ use lithium\core\Libraries;
 use lithium\data\Connections;
 use lithium\core\ClassNotFoundException;
 use lithium\util\Inflector;
+use lithium\analysis\Logger;
 use PhpAmqpLib\connections\AbstractConnection;
 
 class Amqp extends \lithium\core\StaticObject {
@@ -41,6 +42,12 @@ class Amqp extends \lithium\core\StaticObject {
 		'producers' => 'Producer',
     'consumers' => 'Consumer'
 	);
+
+  /**
+   * Mode constants to define how publishing via model save behaves
+   */
+  const MODE_PUBLISH_BLOCK = 'block';
+  const MODE_PUBLISH_CONTINUE = 'continue';
 
   const NON_PERSISTENT = 1;
   const PERSISTENT = 2;
@@ -138,4 +145,30 @@ class Amqp extends \lithium\core\StaticObject {
     return $name !== null ? $consumers[$name] : $consumers;
   }
 
+  public static function applyFilters() {
+    $config = Libraries::get('li3_amqp');
+
+    foreach ($config['producers'] as $key => $params) {
+      if (array_key_exists('class', $params)) {
+        $producer = Libraries::locate('producers', $params['class']);
+        if ($model = $producer::model()) {
+          $model::applyFilter('save', function($self, $params, $chain) use ($key) {
+            $options = $params['options'];
+            if (array_key_exists('amqp', $options)) {
+              $amqp = is_array($options['amqp']) ? $options['amqp'] : array();
+              $amqp += array(
+                'mode' => self::MODE_PUBLISH_CONTINUE
+              );
+              $producer = static::producer($key);
+              $producer->save($params['entity']);
+              if ($amqp['mode'] === self::MODE_PUBLISH_BLOCK) {
+                return;
+              }
+            }
+            return $chain->next($self, $params, $chain);
+          });
+        }
+      }
+    }
+  }
 }

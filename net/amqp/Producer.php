@@ -11,12 +11,18 @@ class Producer extends \li3_amqp\core\BaseAmqp {
   protected $_contentType = 'text/plain';
   protected $_deliveryMode = 2;
 
+  /**
+   * @todo remove and add to autoconfig?
+   */
   public function setContentType($contentType) {
     $this->_contentType = $contentType;
 
     return $this;
   }
 
+  /**
+   * @todo remove and add to autoconfig?
+   */
   public function setDeliveryMode($deliveryMode) {
     $this->_deliveryMode = $deliveryMode;
 
