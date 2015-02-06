@@ -145,9 +145,7 @@ class Amqp extends \lithium\core\StaticObject {
     return $name !== null ? $consumers[$name] : $consumers;
   }
 
-  public static function applyFilters() {
-    $config = Libraries::get('li3_amqp');
-
+  public static function applyFilters($config) {
     foreach ($config['producers'] as $key => $params) {
       if (array_key_exists('class', $params)) {
         $producer = Libraries::locate('producers', $params['class']);
