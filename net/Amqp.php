@@ -44,6 +44,13 @@ class Amqp extends \lithium\core\StaticObject {
 	);
 
   /**
+   * The request object for URL resolution
+   *
+   * @var object
+   */
+  protected static $_request = null;
+
+  /**
    * Mode constants to define how publishing via model save behaves
    */
   const MODE_PUBLISH_BLOCK = 'block';
@@ -143,6 +150,13 @@ class Amqp extends \lithium\core\StaticObject {
       static::$_consumers = $consumers;
     }
     return $name !== null ? $consumers[$name] : $consumers;
+  }
+
+  public static function request($request = null) {
+    if (isset($request)) {
+      static::$_request = $request;
+    }
+    return static::$_request;
   }
 
   public static function applyFilters() {

@@ -10,6 +10,7 @@ use li3_amqp\net\Amqp;
  * after bootstrap during Dispatcher::run()
  */
 Dispatcher::applyFilter('run', function($self, $params, $chain) {
+  Amqp::request($params['request']);
   Amqp::applyFilters();
   return $chain->next($self, $params, $chain);
 });
