@@ -1,6 +1,7 @@
 <?php
 
 use lithium\action\Dispatcher;
+use lithium\core\Libraries;
 use li3_amqp\net\Amqp;
 
 /*
@@ -9,8 +10,11 @@ use li3_amqp\net\Amqp;
  * `lithium\data\Connections`.' is thrown. To circumvent, apply the filters 
  * after bootstrap during Dispatcher::run()
  */
-Dispatcher::applyFilter('run', function($self, $params, $chain) {
+$config = Libraries::get('li3_amqp');
+Dispatcher::applyFilter('run', function($self, $params, $chain) use ($config) {
   Amqp::request($params['request']);
-  Amqp::applyFilters();
+  if (isset($config['producers']) && is_array($config['producers'])) {
+    Amqp::applyFilters($config);
+  }
   return $chain->next($self, $params, $chain);
 });
