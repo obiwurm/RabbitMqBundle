@@ -53,8 +53,9 @@ class Amqp extends \lithium\core\StaticObject {
   /**
    * Mode constants to define how publishing via model save behaves
    */
-  const MODE_PUBLISH_BLOCK = 'block';
-  const MODE_PUBLISH_CONTINUE = 'continue';
+  const PUBLISH_MODE_BLOCK = 'block';
+  const PUBLISH_MODE_CONTINUE = 'continue';
+  const PUBLISH_MODE_FOLLOW = 'follow';
 
   const NON_PERSISTENT = 1;
   const PERSISTENT = 2;
@@ -169,18 +170,31 @@ class Amqp extends \lithium\core\StaticObject {
             if (array_key_exists('amqp', $options)) {
               $amqp = is_array($options['amqp']) ? $options['amqp'] : array();
               $amqp += array(
-                'mode' => self::MODE_PUBLISH_CONTINUE
+                'mode' => self::PUBLISH_MODE_CONTINUE
               );
-              $producer = static::producer($key);
-              $producer->save($params['entity']);
-              if ($amqp['mode'] === self::MODE_PUBLISH_BLOCK) {
-                return;
-              }
+              return static::_publish($key, $self, $params, $chain, $amqp);
             }
             return $chain->next($self, $params, $chain);
           });
         }
       }
+    }
+  }
+
+  protected static function _publish($key, $self, $params, $chain, $options) {
+    $producer = static::producer($key);
+    if ($options['mode'] === self::PUBLISH_MODE_CONTINUE) {
+      $producer->save($params['entity']);
+      return $chain->next($self, $params, $chain);
+    }
+    if ($options['mode'] === self::PUBLISH_MODE_BLOCK) {
+      $producer->save($params['entity']);
+      return true;
+    }
+    if ($options['mode'] === self::PUBLISH_MODE_FOLLOW) {
+      $return = $chain->next($self, $params, $chain);
+      $producer->save($params['entity']);
+      return $return;
     }
   }
 }
